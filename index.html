@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>PKI Visualized — Interactive Cryptography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F5F7FA;
+    --surface:#FFFFFF;
+    --ink:#101826;
+    --muted:#5B6472;
+    --line:#D7DCE3;
+    --navy:#1B3B6F;
+    --teal:#0C7C8C;
+    --gold:#AD7A1F;
+    --ok:#2F8F5B;
+    --danger:#B33A3A;
+    --shadow: 0 4px 20px rgba(16,24,38,.07);
+    --shadow-lg: 0 8px 30px rgba(16,24,38,.1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0E1420;
+      --surface:#161F30;
+      --ink:#E9EEF5;
+      --muted:#9AA6B8;
+      --line:#25344A;
+      --navy:#7DA3DE;
+      --teal:#4FD3D3;
+      --gold:#E3B65C;
+      --ok:#59CD8E;
+      --danger:#E2726B;
+      --shadow: 0 4px 22px rgba(0,0,0,.45);
+      --shadow-lg: 0 10px 36px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0E1420;
+    --surface:#161F30;
+    --ink:#E9EEF5;
+    --muted:#9AA6B8;
+    --line:#25344A;
+    --navy:#7DA3DE;
+    --teal:#4FD3D3;
+    --gold:#E3B65C;
+    --ok:#59CD8E;
+    --danger:#E2726B;
+    --shadow: 0 4px 22px rgba(0,0,0,.45);
+    --shadow-lg: 0 10px 36px rgba(0,0,0,.55);
+  }
+
+  *, *::before, *::after{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(color-mix(in srgb, var(--ink) 4%, transparent) 1px, transparent 1px) 0 0/20px 20px,
+      var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height:1.55;
+    overflow-x:hidden;
+  }
+  a{color:var(--navy);}
+  svg{display:block;}
+
+  /* Full-width container filling the available screen space */
+  .page{
+    width:100%;
+    max-width:1720px;
+    margin:0 auto;
+    padding:1rem 2rem 3.5rem;
+  }
+
+  /* Compact top bar */
+  .site-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:1rem;
+    margin-bottom:1.4rem;
+    padding-bottom:.85rem;
+    border-bottom:1px solid var(--line);
+  }
+  .header-brand{display:flex;align-items:center;gap:.7rem;}
+  .logomark{width:26px;height:26px;color:var(--navy);flex:none;}
+  .header-title{
+    font-family:'Fraunces', Georgia, serif;
+    font-weight:600;
+    font-size:1.35rem;
+    margin:0;
+    color:var(--ink);
+    line-height:1.2;
+    letter-spacing:-.01em;
+  }
+  .legend{display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin:0;}
+  .legend-item{display:flex;align-items:center;gap:.4rem;}
+  .legend-swatch{width:9px;height:9px;border-radius:50%;flex:none;}
+
+  /* Main two-column split layout */
+  .sim-layout{
+    display:grid;
+    grid-template-columns:minmax(0, 1.35fr) minmax(380px, 1fr);
+    gap:2.2rem;
+    align-items:start;
+    margin-bottom:2.6rem;
+  }
+
+  /* Left column: Simulation Canvas */
+  .sim-visual{
+    position:relative;
+    width:100%;
+    background:color-mix(in srgb, var(--surface) 65%, transparent);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:1.4rem 1.4rem 1.8rem;
+    box-shadow:var(--shadow);
+  }
+  .stage-wrapper{
+    position:relative;
+    width:100%;
+  }
+  .stage{
+    position:relative;
+    width:100%;
+    aspect-ratio:1000/590;
+    margin:0 auto;
+    overflow:visible;
+  }
+
+  svg.edges{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    overflow:visible;
+    pointer-events:none;
+  }
+  .edge-line{stroke:var(--line);stroke-width:2.5;fill:none;transition:stroke .45s ease, stroke-width .45s ease, opacity .45s;}
+  .edge-line.dash{stroke-dasharray:6 8;}
+  .edge-line.gold-active{stroke:var(--gold);stroke-width:3.2;}
+  .edge-line.gold-settled{stroke:var(--gold);stroke-width:2.2;opacity:.58;}
+  .edge-line.navy-active{stroke:var(--navy);stroke-width:3.4;}
+  .edge-line.ok-active{stroke:var(--ok);stroke-width:4.2;}
+
+  .actor{
+    position:absolute;
+    --icon-half: 32px;
+    transform:translate(-50%, calc(-1 * var(--icon-half)));
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:.42rem;
+    width:190px;
+    text-align:center;
+    pointer-events:auto;
+    z-index:4;
+  }
+
+  /* Guaranteeing circle integrity — never turns into oval */
+  .actor .icon-badge{
+    width:64px !important;
+    height:64px !important;
+    border-radius:50% !important;
+    background:var(--surface);
+    border:2px solid var(--navy);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--navy);
+    box-shadow:var(--shadow);
+    transition:box-shadow .3s ease, transform .2s ease;
+    flex:0 0 64px !important;
+    flex-shrink:0 !important;
+    aspect-ratio:1 / 1 !important;
+    box-sizing:border-box;
+  }
+  .actor.active .icon-badge{box-shadow:0 0 0 7px color-mix(in srgb, var(--navy) 18%, transparent), var(--shadow);}
+  .actor .icon-badge svg{width:28px;height:28px;flex-shrink:0;}
+
+  /* CA Node Specific Configuration */
+  .actor.ca{
+    --icon-half: 38px;
+    transform:translate(calc(-1 * var(--icon-half)), calc(-1 * var(--icon-half)));
+    flex-direction:row;
+    align-items:flex-start;
+    text-align:left;
+    width:auto;
+    max-width:290px;
+    gap:.75rem;
+  }
+  .actor.ca .icon-badge{
+    border-color:var(--gold);
+    color:var(--gold);
+    width:76px !important;
+    height:76px !important;
+    flex:0 0 76px !important;
+    flex-shrink:0 !important;
+    aspect-ratio:1 / 1 !important;
+    border-radius:50% !important;
+  }
+  .actor.ca .actor-info{
+    display:flex;
+    flex-direction:column;
+    gap:.28rem;
+    padding-top:.25rem;
+    max-width:180px;
+  }
+  .actor.ca.active .icon-badge{box-shadow:0 0 0 8px color-mix(in srgb, var(--gold) 20%, transparent), var(--shadow);}
+  .actor.ca .icon-badge svg{width:34px;height:34px;flex-shrink:0;}
+
+  .actor .name{font-weight:600;font-size:.88rem;color:var(--ink);line-height:1.2;}
+  .actor .role{font-size:.72rem;color:var(--muted);line-height:1.25;}
+
+  .badge-row{
+    display:flex;
+    gap:.32rem;
+    flex-wrap:wrap;
+    justify-content:center;
+    align-items:center;
+    min-height:22px;
+  }
+  .status-row{
+    display:flex;
+    flex-direction:column;
+    gap:.32rem;
+    align-items:center;
+    width:100%;
+  }
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:.3rem;
+    font-size:.66rem;
+    font-weight:600;
+    color:var(--teal);
+    background:color-mix(in srgb, var(--teal) 12%, var(--surface));
+    border:1px solid color-mix(in srgb, var(--teal) 42%, transparent);
+    padding:.18rem .46rem;
+    border-radius:20px;
+    opacity:0;
+    transform:scale(.75);
+    white-space:nowrap;
+    transition:opacity .25s, transform .25s;
+  }
+  .badge.show{opacity:1;transform:scale(1);}
+  .badge svg{width:11px;height:11px;flex-shrink:0;}
+  .badge.pop{animation:popIn .45s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
+  .badge.gold{
+    color:var(--gold);
+    background:color-mix(in srgb, var(--gold) 13%, var(--surface));
+    border-color:color-mix(in srgb, var(--gold) 45%, transparent);
+  }
+  @keyframes popIn{
+    0%{transform:scale(.4);opacity:0;}
+    60%{transform:scale(1.15);opacity:1;}
+    100%{transform:scale(1);}
+  }
+
+  .trust-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.32rem;
+    font-size:.64rem;
+    font-weight:500;
+    color:var(--muted);
+    border:1px dashed var(--line);
+    padding:.18rem .52rem;
+    border-radius:20px;
+    opacity:.75;
+    background:color-mix(in srgb, var(--paper) 70%, var(--surface));
+    transition:all .35s ease;
+    white-space:nowrap;
+  }
+  .trust-chip svg{width:12px;height:12px;flex-shrink:0;}
+  .trust-chip.active{
+    color:var(--gold);
+    border-color:var(--gold);
+    border-style:solid;
+    opacity:1;
+    background:color-mix(in srgb, var(--gold) 12%, var(--surface));
+  }
+
+  .cert-card{
+    position:absolute;
+    width:116px;
+    padding:.52rem .6rem .65rem;
+    background:var(--surface);
+    border:1.5px solid var(--gold);
+    border-radius:8px;
+    box-shadow:var(--shadow);
+    font-size:.62rem;
+    color:var(--ink);
+    opacity:0;
+    transform:translate(-50%,-50%) scale(.75);
+    transition:opacity .35s ease, transform .35s ease;
+    pointer-events:none;
+    z-index:5;
+  }
+  .cert-card.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  .cert-card .cc-head{
+    display:flex;
+    align-items:center;
+    gap:.32rem;
+    color:var(--gold);
+    font-weight:700;
+    margin-bottom:.32rem;
+    font-size:.64rem;
+  }
+  .cert-card .cc-head svg{width:13px;height:13px;flex-shrink:0;}
+  .cert-card .cc-line{height:3px;background:var(--line);border-radius:2px;margin:.24rem 0;}
+  .cert-card .cc-line.short{width:60%;}
+  .cert-card .cc-check{
+    position:absolute;top:-9px;right:-9px;width:20px;height:20px;border-radius:50%;
+    background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;
+    opacity:0;transform:scale(.4);transition:all .3s ease;
+    box-shadow:0 2px 6px rgba(0,0,0,.2);
+  }
+  .cert-card.verified .cc-check{opacity:1;transform:scale(1);}
+  .cert-card .cc-check svg{width:11px;height:11px;}
+
+  .packet{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    display:flex;
+    align-items:center;
+    gap:.36rem;
+    background:var(--surface);
+    border:1.5px solid var(--navy);
+    border-radius:22px;
+    padding:.34rem .68rem;
+    font-size:.7rem;
+    font-weight:600;
+    color:var(--navy);
+    box-shadow:var(--shadow);
+    opacity:0;
+    transition:left .95s cubic-bezier(.45,0,.2,1), top .95s cubic-bezier(.45,0,.2,1), opacity .25s ease;
+    white-space:nowrap;
+    z-index:10;
+    pointer-events:none;
+  }
+  .packet svg{width:14px;height:14px;flex-shrink:0;}
+  .packet.gold{border-color:var(--gold);color:var(--gold);}
+  .packet.teal{border-color:var(--teal);color:var(--teal);}
+  .packet.ok{border-color:var(--ok);color:var(--ok);}
+  .packet.show{opacity:1;}
+
+  /* Right column: Interactive Control and Explanation Panel */
+  .sim-sidebar{
+    display:flex;
+    flex-direction:column;
+    gap:1.25rem;
+  }
+
+  .phase-track-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.15rem 1.3rem;
+    box-shadow:var(--shadow);
+  }
+  .phase-groups{display:flex;gap:1.5rem;flex-wrap:wrap;}
+  .phase-group-label{font-weight:600;font-size:.76rem;color:var(--muted);margin-bottom:.5rem;letter-spacing:.02em;}
+  .dots{display:flex;gap:.4rem;flex-wrap:wrap;}
+  .dot{
+    width:32px;height:32px;border-radius:50%;
+    border:1.5px solid var(--line);
+    background:var(--surface);
+    color:var(--muted);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.74rem;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:background .2s, border-color .2s, color .2s, transform .15s, box-shadow .2s;
+  }
+  .dot:hover{transform:translateY(-2px);border-color:var(--navy);color:var(--navy);}
+  .dot.done{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .dot.current{border-color:var(--gold);color:var(--ink);font-weight:600;box-shadow:0 0 0 4px color-mix(in srgb, var(--gold) 25%, transparent);}
+  .dot:focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.6rem 1.7rem;
+    box-shadow:var(--shadow);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    min-height:260px;
+  }
+  .panel-meta{display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem;flex-wrap:wrap;}
+  .phase-pill{font-size:.72rem;font-weight:600;padding:.22rem .65rem;border-radius:20px;}
+  .phase-pill.issuance{color:var(--gold);background:color-mix(in srgb, var(--gold) 14%, var(--surface));border:1px solid color-mix(in srgb, var(--gold) 45%, transparent);}
+  .phase-pill.handshake{color:var(--navy);background:color-mix(in srgb, var(--navy) 10%, var(--surface));border:1px solid color-mix(in srgb, var(--navy) 32%, transparent);}
+  .step-count{font-family:'IBM Plex Mono', monospace;font-size:.74rem;color:var(--muted);}
+  .panel h2{font-family:'Fraunces', Georgia, serif;font-weight:600;font-size:1.42rem;margin:.2rem 0 .7rem;line-height:1.25;}
+  .panel p{font-size:1.02rem;line-height:1.65;margin:0;color:var(--ink);}
+
+  .controls-wrapper{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1rem 1.2rem;
+    box-shadow:var(--shadow);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.6rem;
+    flex-wrap:wrap;
+  }
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:.45rem;
+    font-weight:600;font-size:.86rem;font-family:inherit;
+    padding:.62rem 1.15rem;border-radius:10px;
+    border:1.5px solid var(--navy);
+    background:var(--surface);color:var(--navy);
+    cursor:pointer;transition:background .2s ease, color .2s ease, transform .12s ease, box-shadow .2s;
+  }
+  .btn:hover:not(:disabled){background:var(--navy);color:#fff;}
+  .btn:active:not(:disabled){transform:translateY(1px);}
+  .btn:disabled{opacity:.35;cursor:not-allowed;}
+  .btn.primary{background:var(--navy);color:#fff;}
+  .btn.primary:hover{opacity:.92;background:var(--navy);}
+  .btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+  .btn svg{width:15px;height:15px;flex-shrink:0;}
+
+  .trust-demo{margin-top:2.5rem;padding-top:2.2rem;border-top:1px solid var(--line);}
+  .trust-demo h2, .glossary h2{font-family:'Fraunces', Georgia, serif;font-weight:600;font-size:1.35rem;margin:0 0 .5rem;}
+  .trust-demo p.sub, .glossary p.sub{color:var(--muted);max-width:68ch;margin:0 0 1.2rem;line-height:1.6;}
+  .toggle-row{display:flex;align-items:center;gap:.75rem;margin-bottom:1.4rem;}
+  .switch{position:relative;width:44px;height:26px;flex:none;}
+  .switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer;}
+  .switch .track{position:absolute;inset:0;background:var(--line);border-radius:20px;transition:background .25s ease;}
+  .switch .thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .25s ease;}
+  .switch input:checked + .track{background:var(--danger);}
+  .switch input:checked + .track + .thumb{transform:translateX(18px);}
+  .switch input:focus-visible + .track{outline:2px solid var(--teal);outline-offset:2px;}
+  .toggle-label{font-size:.92rem;color:var(--ink);cursor:pointer;}
+
+  .demo-cards{
+    max-width:600px;
+    width:100%;
+    margin-top:.4rem;
+  }
+  .demo-card{border-radius:12px;padding:1.2rem 1.3rem;border:1.5px solid var(--line);background:var(--surface);}
+  .demo-card .dc-icon{width:32px;height:32px;margin-bottom:.65rem;}
+  .demo-card h3{font-size:.98rem;margin:0 0 .4rem;}
+  .demo-card p{font-size:.88rem;color:var(--muted);margin:0;line-height:1.6;}
+  .demo-card.ok-card{border-color:var(--ok);}
+  .demo-card.ok-card .dc-icon{color:var(--ok);}
+  .demo-card.ok-card h3{color:var(--ok);}
+  .demo-card.fail-card{border-color:var(--danger);}
+  .demo-card.fail-card .dc-icon{color:var(--danger);}
+  .demo-card.fail-card h3{color:var(--danger);}
+
+  .glossary{margin-top:3rem;padding-top:2.2rem;border-top:1px solid var(--line);}
+  .glossary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;margin-top:1.2rem;}
+  .term{padding:.9rem 1.1rem;border-left:3px solid var(--teal);background:color-mix(in srgb, var(--teal) 5%, var(--surface));border-radius:0 8px 8px 0;}
+  .term dt{font-weight:600;font-size:.9rem;margin-bottom:.3rem;color:var(--ink);}
+  .term dd{margin:0;font-size:.84rem;line-height:1.55;color:var(--muted);}
+
+  .site-footer{margin-top:3.2rem;font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padding-top:1.3rem;line-height:1.65;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+
+  /* Responsive Stacking (< 1060px) */
+  @media (max-width: 1060px){
+    .page{padding:1rem 1.2rem 3rem;}
+    .sim-layout{
+      grid-template-columns:1fr;
+      gap:1.6rem;
+    }
+    .panel{min-height:auto;}
+  }
+
+  /* Responsive Mobile Viewport Adjustments */
+  @media (max-width: 600px){
+    .page{padding:.8rem .8rem 2.5rem;}
+    .sim-visual{padding:1rem .6rem 1.4rem;}
+    .stage{aspect-ratio:1000/720;}
+
+    .actor{width:138px;--icon-half:26px;}
+    .actor .icon-badge{
+      width:52px !important;
+      height:52px !important;
+      flex:0 0 52px !important;
+      aspect-ratio:1 / 1 !important;
+    }
+    .actor .icon-badge svg{width:22px;height:22px;}
+
+    /* CA center aligned on mobile to prevent overflow */
+    .actor.ca{
+      --icon-half:28px;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      transform:translate(-50%, calc(-1 * var(--icon-half)));
+      width:auto;
+      max-width:210px;
+      gap:.35rem;
+    }
+    .actor.ca .icon-badge{
+      width:56px !important;
+      height:56px !important;
+      flex:0 0 56px !important;
+      aspect-ratio:1 / 1 !important;
+    }
+    .actor.ca .icon-badge svg{width:26px;height:26px;}
+    .actor.ca .actor-info{
+      align-items:center;
+      text-align:center;
+      max-width:190px;
+      padding-top:.2rem;
+    }
+    .actor.ca .badge-row{justify-content:center;}
+
+    .actor .name{font-size:.8rem;}
+    .actor .role{font-size:.66rem;}
+
+    .cert-card{width:96px;font-size:.56rem;padding:.42rem .5rem;}
+    .cert-card .cc-head{font-size:.58rem;}
+    .packet{font-size:.62rem;padding:.26rem .55rem;}
+
+    .badge{font-size:.62rem;padding:.14rem .38rem;}
+    .badge svg{width:10px;height:10px;}
+    .trust-chip{font-size:.60rem;padding:.14rem .42rem;}
+
+    .panel{padding:1.2rem 1.25rem;}
+    .panel h2{font-size:1.25rem;}
+    .panel p{font-size:.95rem;}
+
+    .controls-wrapper{justify-content:center;}
+  }
+
+  @media (max-width: 380px){
+    .stage{aspect-ratio:1000/760;}
+    .actor{width:110px;--icon-half:22px;}
+    .actor .icon-badge{
+      width:44px !important;
+      height:44px !important;
+      flex:0 0 44px !important;
+      aspect-ratio:1 / 1 !important;
+    }
+    .actor .icon-badge svg{width:18px;height:18px;}
+
+    .actor.ca{--icon-half:24px;max-width:170px;}
+    .actor.ca .icon-badge{
+      width:48px !important;
+      height:48px !important;
+      flex:0 0 48px !important;
+      aspect-ratio:1 / 1 !important;
+    }
+    .actor.ca .icon-badge svg{width:22px;height:22px;}
+
+    .actor .name{font-size:.74rem;}
+    .actor .role{font-size:.60rem;}
+    .badge{font-size:.58rem;padding:.12rem .32rem;}
+    .trust-chip{font-size:.55rem;padding:.12rem .34rem;}
+    .cert-card{width:84px;font-size:.52rem;}
+    .actor.ca .actor-info{max-width:150px;gap:.15rem;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="site-header">
+    <div class="header-brand">
+      <svg class="logomark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 3l11 4v8c0 7-4.7 11.4-11 14C9.7 26.4 5 22 5 15V7l11-4Z"/>
+        <path d="M11.5 16.2l3 3 6-6.4"/>
+      </svg>
+      <h1 class="header-title">PKI, Visualized</h1>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--navy)"></span>Node</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--teal)"></span>Keys</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--gold)"></span>Certificates</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--ok)"></span>Verified</span>
+    </div>
+  </header>
+
+  <!-- Two-Column Interactive Simulation Area -->
+  <div class="sim-layout">
+
+    <!-- Left Side: Interactive Visualization Stage -->
+    <div class="sim-visual">
+      <div class="stage-wrapper">
+        <div class="stage" id="stage">
+          <svg id="svg-edges" class="edges" viewBox="0 0 1000 590" preserveAspectRatio="none" aria-hidden="true">
+            <line id="edge-server-ca" class="edge-line" x1="820" y1="395" x2="500" y2="92"></line>
+            <line id="edge-client-ca" class="edge-line dash" x1="180" y1="395" x2="500" y2="92"></line>
+            <line id="edge-client-server" class="edge-line" x1="180" y1="395" x2="820" y2="395"></line>
+          </svg>
+
+          <!-- Certificate Authority (CA) Node -->
+          <div class="actor ca" id="actor-ca" style="left:50%;top:15.5%;">
+            <div class="icon-badge">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="24" cy="19" r="13"/>
+                <path d="M17.5 30.5L14 42l10-4 10 4-3.5-11.5"/>
+                <path d="M24 11.5l2 4 4.4.6-3.2 3.1.8 4.4-4-2.1-4 2.1.8-4.4-3.2-3.1 4.4-.6Z" fill="currentColor" stroke="none"/>
+              </svg>
+            </div>
+            <div class="actor-info">
+              <div class="name">Certificate Authority</div>
+              <div class="role">Trusted by everyone in advance</div>
+              <div class="badge-row" id="badges-ca"></div>
+            </div>
+          </div>
+
+          <!-- Client Node -->
+          <div class="actor" id="actor-client" style="left:18%;top:67%;">
+            <div class="icon-badge">
+              <svg viewBox="0 0 48 36" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="7" y="4" width="34" height="21" rx="2"/>
+                <path d="M2 30h44l-4 4H6l-4-4Z"/>
+              </svg>
+            </div>
+            <div class="name">Client</div>
+            <div class="role">Your browser</div>
+            <div class="status-row">
+              <div class="badge-row" id="badges-client"></div>
+              <div class="trust-chip" id="trust-chip">
+                <svg viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="12" r="6.5"/><path d="M16.5 12h24"/><path d="M33 12v5"/><path d="M40 12v8"/></svg>
+                Trusted CA key, built in
+              </div>
+            </div>
+          </div>
+
+          <!-- Server Node -->
+          <div class="actor" id="actor-server" style="left:82%;top:67%;">
+            <div class="icon-badge">
+              <svg viewBox="0 0 48 40" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="4" width="36" height="14" rx="2"/>
+                <rect x="6" y="22" width="36" height="14" rx="2"/>
+                <circle cx="14" cy="11" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="14" cy="29" r="1.5" fill="currentColor" stroke="none"/>
+              </svg>
+            </div>
+            <div class="name">Server</div>
+            <div class="role">The site you're visiting</div>
+            <div class="badge-row" id="badges-server"></div>
+          </div>
+
+          <!-- Certificate Displays -->
+          <div class="cert-card" id="cert-server">
+            <div class="cc-head">
+              <svg viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h20l6 6v22H7Z"/><path d="M27 2v6h6"/></svg>
+              Certificate
+            </div>
+            <div class="cc-line"></div><div class="cc-line short"></div><div class="cc-line"></div>
+            <div class="cc-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l5 5L20 6"/></svg></div>
+          </div>
+
+          <div class="cert-card" id="cert-client">
+            <div class="cc-head">
+              <svg viewBox="0 0 40 44" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h20l6 6v22H7Z"/><path d="M27 2v6h6"/></svg>
+              Certificate
+            </div>
+            <div class="cc-line"></div><div class="cc-line short"></div><div class="cc-line"></div>
+            <div class="cc-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l5 5L20 6"/></svg></div>
+          </div>
+
+          <div class="packet" id="packet"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side: Step Timeline, Explanation Box & Controls -->
+    <div class="sim-sidebar">
+      
+      <!-- Phase & Step Navigator Card -->
+      <section class="phase-track-card" aria-label="Simulation progress">
+        <div class="phase-groups">
+          <div>
+            <div class="phase-group-label">Phase 1 — Issuance</div>
+            <div class="dots" id="dots-a"></div>
+          </div>
+          <div>
+            <div class="phase-group-label">Phase 2 — Handshake</div>
+            <div class="dots" id="dots-b"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step Explanation Box -->
+      <section class="panel" aria-live="polite">
+        <div class="panel-meta">
+          <span class="phase-pill issuance" id="phase-pill">Phase 1 — Issuing a certificate</span>
+          <span class="step-count" id="step-count">Step 1 of 12</span>
+        </div>
+        <h2 id="step-title">—</h2>
+        <p id="step-text">—</p>
+      </section>
+
+      <!-- Primary Controls Row -->
+      <div class="controls-wrapper">
+        <button class="btn" id="btn-prev" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+          Previous
+        </button>
+        <button class="btn primary" id="btn-play" type="button">
+          <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 5l13 7-13 7V5Z"/></svg>
+          <span id="play-label">Play</span>
+        </button>
+        <button class="btn" id="btn-next" type="button">
+          Next
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <button class="btn" id="btn-reset" type="button">Restart</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom Additional Educational Information -->
+  <section class="trust-demo">
+    <h2>What if the certificate can't be trusted?</h2>
+    <p class="sub">Step 7 is the critical verification point. If the signature fails — such as when a certificate is self-signed, expired, or issued by an unrecognized authority — the client halts the connection immediately.</p>
+    <div class="toggle-row">
+      <label class="switch">
+        <input type="checkbox" id="trust-toggle" aria-describedby="toggle-desc">
+        <span class="track"></span>
+        <span class="thumb"></span>
+      </label>
+      <label class="toggle-label" for="trust-toggle" id="toggle-desc">Show an untrusted certificate instead</label>
+    </div>
+    <div class="demo-cards">
+      <div class="demo-card ok-card" id="demo-ok">
+        <svg class="dc-icon" viewBox="0 0 32 34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="15" width="22" height="16" rx="3"/><path d="M10 15v-4a6 6 0 0 1 12 0v4"/></svg>
+        <h3>Connection is private</h3>
+        <p>The certificate is signed by an authority pre-trusted in your browser's root store, the cryptographic signature is authentic, and the domain matches. The secure handshake completes safely.</p>
+      </div>
+      <div class="demo-card fail-card" id="demo-fail" hidden>
+        <svg class="dc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20Z"/><path d="M12 9v6"/><circle cx="12" cy="18" r="0.6" fill="currentColor"/></svg>
+        <h3>Your connection is not private</h3>
+        <p>The browser cannot trace this certificate to a known root CA, which means there is no guarantee that this public key truly belongs to the intended server. To prevent interception, it stops and warns the user.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="glossary">
+    <h2>Key terms</h2>
+    <p class="sub">Fundamental cryptographic building blocks.</p>
+    <dl class="glossary-grid">
+      <div class="term"><dt>Public key</dt><dd>A freely distributed key used to encrypt messages that can only be unlocked by its matching private counterpart.</dd></div>
+      <div class="term"><dt>Private key</dt><dd>A strictly protected secret key. It alone can decrypt ciphertext created by the public key and produce valid digital signatures.</dd></div>
+      <div class="term"><dt>Certificate Authority (CA)</dt><dd>A trusted organization built into browsers and operating systems that verifies identities before issuing signed certificates.</dd></div>
+      <div class="term"><dt>Digital certificate</dt><dd>A tamper-evident file binding an identity (like a domain) to a public key, certified by a trusted CA signature.</dd></div>
+      <div class="term"><dt>Digital signature</dt><dd>Cryptographic proof that a specific private key endorsed a payload, verifiable by anyone using the corresponding public key.</dd></div>
+      <div class="term"><dt>Trust store</dt><dd>The local collection of pre-approved root CA certificates embedded in your browser or operating system.</dd></div>
+      <div class="term"><dt>Session key</dt><dd>A temporary symmetric key negotiated for fast, bulk payload encryption throughout the active session.</dd></div>
+    </dl>
+  </section>
+
+  <footer class="site-footer">
+    This simulation illustrates the core mechanism of PKI: how an agreed-upon, trusted third party enables two strangers across the internet to verify identity and encrypt communication.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Responsive geometry configurations preventing coordinate warping */
+  var GEOMETRY = {
+    desktop: {
+      dims: { w: 1000, h: 590 },
+      nodes: {
+        ca:     { x: 500, y: 92  },
+        client: { x: 180, y: 395 },
+        server: { x: 820, y: 395 }
+      },
+      certs: {
+        client: { x: 180, y: 250 },
+        server: { x: 820, y: 250 }
+      }
+    },
+    mobile: {
+      dims: { w: 1000, h: 720 },
+      nodes: {
+        ca:     { x: 500, y: 80  },
+        client: { x: 210, y: 450 },
+        server: { x: 790, y: 450 }
+      },
+      certs: {
+        client: { x: 210, y: 255 },
+        server: { x: 790, y: 255 }
+      }
+    },
+    smallMobile: {
+      dims: { w: 1000, h: 760 },
+      nodes: {
+        ca:     { x: 500, y: 75  },
+        client: { x: 220, y: 460 },
+        server: { x: 780, y: 460 }
+      },
+      certs: {
+        client: { x: 220, y: 260 },
+        server: { x: 780, y: 260 }
+      }
+    }
+  };
+
+  var currentDims = GEOMETRY.desktop.dims;
+  var NODE_POS = GEOMETRY.desktop.nodes;
+  var CERT_SERVER_POS = GEOMETRY.desktop.certs.server;
+  var CERT_CLIENT_POS = GEOMETRY.desktop.certs.client;
+
+  function pct(coord, axis, dims){
+    var base = dims || currentDims;
+    return (axis === 'x' ? coord / base.w : coord / base.h) * 100 + '%';
+  }
+
+  var ICONS = {
+    key: '<svg viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="12" r="6.2"/><path d="M16.2 12h24"/><path d="M33 12v5"/><path d="M40 12v8"/></svg>',
+    keySolid: '<svg viewBox="0 0 48 24" fill="currentColor" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="12" r="6.2"/><path d="M16.2 12h24" fill="none"/><path d="M33 12v5" fill="none"/><path d="M40 12v8" fill="none"/></svg>',
+    doc: '<svg viewBox="0 0 34 40" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h16l8 8v28H6Z"/><path d="M22 2v8h8"/><path d="M11 20h12M11 26h12M11 14h6"/></svg>',
+    cert: '<svg viewBox="0 0 34 40" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h16l8 8v28H6Z"/><path d="M22 2v8h8"/><path d="M11 18h12M11 24h9"/></svg>',
+    lock: '<svg viewBox="0 0 32 34" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="15" width="22" height="16" rx="3"/><path d="M10 15v-4a6 6 0 0 1 12 0v4"/></svg>',
+    envelope: '<svg viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="28" height="20" rx="2"/><path d="M3 4l13 10L29 4"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l5 5L20 6"/></svg>'
+  };
+
+  function createBadge(kind, label, extraClass){
+    var icon = kind === 'private' ? ICONS.keySolid : (kind === 'lock' ? ICONS.lock : (kind === 'check' ? ICONS.check : ICONS.key));
+    var el = document.createElement('span');
+    el.className = 'badge' + (extraClass ? ' ' + extraClass : '');
+    el.innerHTML = icon + '<span>' + label + '</span>';
+    return el;
+  }
+
+  var STEPS = [
+    { phase:'A', title:'The server creates a key pair',
+      text:'Before proving its identity, the server generates two mathematically linked keys: a private key it will strictly guard, and a public key it can safely share with anyone.',
+      activeActors:['server'], packet:null,
+      apply:function(s){ s.server.hasKeys = true; } },
+
+    { phase:'A', title:'The server requests a certificate',
+      text:'The server packages its public key and domain information into a Certificate Signing Request (CSR), then submits it to a mutually trusted Certificate Authority.',
+      activeActors:['server','ca'], packet:{ from:'server', to:'ca', kind:'doc', label:'CSR', cls:'gold' },
+      apply:function(s){ s.edges.serverCA = 'active'; } },
+
+    { phase:'A', title:"The CA verifies domain control",
+      text:'The CA thoroughly checks that the requester genuinely owns and operates the specified domain name before granting endorsement.',
+      activeActors:['ca'], packet:null,
+      apply:function(s){ s.ca.verifying = true; s.edges.serverCA = 'active'; } },
+
+    { phase:'A', title:'The CA signs and issues the certificate',
+      text:"Satisfied, the CA bundles the server's public key with its domain name and signs it using the CA's own private key. This signed certificate is returned to the server.",
+      activeActors:['ca','server'], packet:{ from:'ca', to:'server', kind:'cert', label:'Certificate', cls:'gold' },
+      apply:function(s){ s.server.hasCert = true; s.edges.serverCA = 'settled'; } },
+
+    { phase:'B', title:'A client initiates connection',
+      text:'Later, a client browser initiates contact with the server requesting a secure, encrypted HTTPS session.',
+      activeActors:['client','server'], packet:{ from:'client', to:'server', kind:'envelope', label:'Client Hello', cls:'' },
+      apply:function(s){ s.edges.clientServer = 'contact'; } },
+
+    { phase:'B', title:'The server presents its certificate',
+      text:"The server responds by serving the digital certificate signed by the CA, presenting its public key and identity proof.",
+      activeActors:['server','client'], packet:{ from:'server', to:'client', kind:'cert', label:'Certificate', cls:'gold' },
+      apply:function(s){ s.client.hasCert = true; s.edges.clientServer = 'contact'; } },
+
+    { phase:'B', title:'The client validates the digital signature',
+      text:"Using the CA's public key — built directly into the browser's trust store — the client verifies the digital signature, ensuring it is authentic and unexpired.",
+      activeActors:['client'], packet:null,
+      apply:function(s){ s.client.trustChecked = true; s.edges.clientCA = 'settled'; } },
+
+    { phase:'B', title:'Trust is established',
+      text:'The cryptographic signature is verified. The client now trusts that this public key truly belongs to this domain and not an impersonator.',
+      activeActors:['client','server'], packet:null,
+      apply:function(s){ s.client.trustEstablished = true; } },
+
+    { phase:'B', title:'The client generates a symmetric session key',
+      text:'The client produces a fresh, random symmetric session key. Symmetric encryption is orders of magnitude faster for transferring bulk web traffic.',
+      activeActors:['client'], packet:null,
+      apply:function(s){ s.client.hasSessionKey = true; } },
+
+    { phase:'B', title:"The session key is locked with server's public key",
+      text:"The client encrypts the session key with the server's verified public key. Only the genuine server holding the matching private key can unlock it.",
+      activeActors:['client','server'], packet:{ from:'client', to:'server', kind:'lock', label:'Encrypted Key', cls:'teal' },
+      apply:function(s){ s.edges.clientServer = 'contact'; } },
+
+    { phase:'B', title:'The server decrypts with its private key',
+      text:'The server decrypts the payload with its private key, retrieving the shared session key. Both endpoints now share the identical secret.',
+      activeActors:['server'], packet:null,
+      apply:function(s){ s.server.hasSessionKey = true; } },
+
+    { phase:'B', title:'A secure encrypted conversation begins',
+      text:"All subsequent web traffic is scrambled using the symmetric session key. Eavesdroppers seeing the transmission observe only indecipherable ciphertext.",
+      activeActors:['client','server'], packet:null, loop:true,
+      apply:function(s){ s.edges.clientServer = 'secure'; } }
+  ];
+
+  function freshState(){
+    return {
+      server:{ hasKeys:false, hasCert:false, hasSessionKey:false },
+      client:{ hasCert:false, trustChecked:false, trustEstablished:false, hasSessionKey:false },
+      ca:{ verifying:false },
+      edges:{ serverCA:'idle', clientCA:'idle', clientServer:'idle' }
+    };
+  }
+
+  function computeState(uptoIndex){
+    var s = freshState();
+    for (var i = 0; i <= uptoIndex && i < STEPS.length; i++){
+      STEPS[i].apply(s);
+    }
+    return s;
+  }
+
+  var els = {
+    stage: document.getElementById('stage'),
+    svgEdges: document.getElementById('svg-edges'),
+    edgeServerCA: document.getElementById('edge-server-ca'),
+    edgeClientCA: document.getElementById('edge-client-ca'),
+    edgeClientServer: document.getElementById('edge-client-server'),
+    actorCA: document.getElementById('actor-ca'),
+    actorClient: document.getElementById('actor-client'),
+    actorServer: document.getElementById('actor-server'),
+    badgesCA: document.getElementById('badges-ca'),
+    badgesClient: document.getElementById('badges-client'),
+    badgesServer: document.getElementById('badges-server'),
+    trustChip: document.getElementById('trust-chip'),
+    certServer: document.getElementById('cert-server'),
+    certClient: document.getElementById('cert-client'),
+    packet: document.getElementById('packet'),
+    phasePill: document.getElementById('phase-pill'),
+    stepCount: document.getElementById('step-count'),
+    stepTitle: document.getElementById('step-title'),
+    stepText: document.getElementById('step-text'),
+    btnPrev: document.getElementById('btn-prev'),
+    btnNext: document.getElementById('btn-next'),
+    btnPlay: document.getElementById('btn-play'),
+    btnReset: document.getElementById('btn-reset'),
+    playIcon: document.getElementById('play-icon'),
+    dotsA: document.getElementById('dots-a'),
+    dotsB: document.getElementById('dots-b'),
+    trustToggle: document.getElementById('trust-toggle'),
+    demoOk: document.getElementById('demo-ok'),
+    demoFail: document.getElementById('demo-fail')
+  };
+
+  var mobileQuery = window.matchMedia('(max-width:600px)');
+  var smallMobileQuery = window.matchMedia('(max-width:380px)');
+
+  function getLayoutConfig(){
+    if (smallMobileQuery.matches){
+      return GEOMETRY.smallMobile;
+    }
+    if (mobileQuery.matches){
+      return GEOMETRY.mobile;
+    }
+    return GEOMETRY.desktop;
+  }
+
+  function applyLayout(){
+    var config = getLayoutConfig();
+    currentDims = config.dims;
+    NODE_POS = config.nodes;
+    CERT_SERVER_POS = config.certs.server;
+    CERT_CLIENT_POS = config.certs.client;
+
+    els.svgEdges.setAttribute('viewBox', '0 0 ' + currentDims.w + ' ' + currentDims.h);
+
+    els.actorCA.style.left = pct(NODE_POS.ca.x, 'x');
+    els.actorCA.style.top = pct(NODE_POS.ca.y, 'y');
+
+    els.actorClient.style.left = pct(NODE_POS.client.x, 'x');
+    els.actorClient.style.top = pct(NODE_POS.client.y, 'y');
+
+    els.actorServer.style.left = pct(NODE_POS.server.x, 'x');
+    els.actorServer.style.top = pct(NODE_POS.server.y, 'y');
+
+    els.certServer.style.left = pct(CERT_SERVER_POS.x, 'x');
+    els.certServer.style.top = pct(CERT_SERVER_POS.y, 'y');
+
+    els.certClient.style.left = pct(CERT_CLIENT_POS.x, 'x');
+    els.certClient.style.top = pct(CERT_CLIENT_POS.y, 'y');
+
+    els.edgeServerCA.setAttribute('x1', NODE_POS.server.x);
+    els.edgeServerCA.setAttribute('y1', NODE_POS.server.y);
+    els.edgeServerCA.setAttribute('x2', NODE_POS.ca.x);
+    els.edgeServerCA.setAttribute('y2', NODE_POS.ca.y);
+
+    els.edgeClientCA.setAttribute('x1', NODE_POS.client.x);
+    els.edgeClientCA.setAttribute('y1', NODE_POS.client.y);
+    els.edgeClientCA.setAttribute('x2', NODE_POS.ca.x);
+    els.edgeClientCA.setAttribute('y2', NODE_POS.ca.y);
+
+    els.edgeClientServer.setAttribute('x1', NODE_POS.client.x);
+    els.edgeClientServer.setAttribute('y1', NODE_POS.client.y);
+    els.edgeClientServer.setAttribute('x2', NODE_POS.server.x);
+    els.edgeClientServer.setAttribute('y2', NODE_POS.server.y);
+  }
+
+  applyLayout();
+  var resizeTimer;
+  window.addEventListener('resize', function(){
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(applyLayout, 100);
+  });
+
+  var dotEls = [];
+  STEPS.forEach(function(step, i){
+    var d = document.createElement('button');
+    d.type = 'button';
+    d.className = 'dot';
+    d.textContent = (i + 1);
+    d.setAttribute('aria-label', 'Go to step ' + (i + 1) + ': ' + step.title);
+    d.addEventListener('click', function(){
+      stopPlaying();
+      goToStep(i);
+    });
+    (step.phase === 'A' ? els.dotsA : els.dotsB).appendChild(d);
+    dotEls.push(d);
+  });
+
+  var current = -1;
+  var prevBooleans = {};
+  var loopTimer = null;
+
+  function setEdgeClass(el, mode){
+    el.classList.remove('gold-active','gold-settled','navy-active','ok-active');
+    if (mode === 'active') el.classList.add('gold-active');
+    else if (mode === 'settled') el.classList.add('gold-settled');
+    else if (mode === 'contact') el.classList.add('navy-active');
+    else if (mode === 'secure') el.classList.add('ok-active');
+  }
+
+  function toggleReveal(el, show, isNew){
+    if (show){
+      el.classList.add('show');
+      if (isNew && !reduceMotion){
+        el.classList.remove('pop');
+        void el.offsetWidth;
+        el.classList.add('pop');
+      }
+    } else {
+      el.classList.remove('show');
+    }
+  }
+
+  function renderBadges(container, wanted){
+    var existing = {};
+    Array.prototype.forEach.call(container.children, function(c){
+      existing[c.dataset.id] = c;
+    });
+    wanted.forEach(function(w){
+      var el = existing[w.id];
+      if (!el){
+        el = createBadge(w.kind, w.label, w.cls);
+        el.dataset.id = w.id;
+        container.appendChild(el);
+        requestAnimationFrame(function(){
+          el.classList.add('show');
+          if (!reduceMotion){ el.classList.add('pop'); }
+        });
+      }
+      delete existing[w.id];
+    });
+    Object.keys(existing).forEach(function(id){
+      existing[id].remove();
+    });
+  }
+
+  function render(state){
+    var serverBadges = [];
+    if (state.server.hasKeys){
+      serverBadges.push({ id:'pub', kind:'public', label:'Public key' });
+      serverBadges.push({ id:'priv', kind:'private', label:'Private key' });
+    }
+    if (state.server.hasSessionKey){
+      serverBadges.push({ id:'sess', kind:'lock', label:'Session key' });
+    }
+    renderBadges(els.badgesServer, serverBadges);
+
+    renderBadges(els.badgesClient,
+      state.client.hasSessionKey ? [{ id:'sess', kind:'lock', label:'Session key' }] : []);
+
+    renderBadges(els.badgesCA,
+      state.ca.verifying ? [{ id:'ver', kind:'check', label:'Domain verified', cls:'gold' }] : []);
+
+    els.trustChip.classList.toggle('active', state.client.trustChecked);
+
+    toggleReveal(els.certServer, state.server.hasCert, !prevBooleans.serverCert);
+    els.certServer.classList.add('verified');
+    toggleReveal(els.certClient, state.client.hasCert, !prevBooleans.clientCert);
+    els.certClient.classList.toggle('verified', state.client.trustEstablished);
+
+    [els.actorCA, els.actorClient, els.actorServer].forEach(function(a){ a.classList.remove('active'); });
+    if (current >= 0){
+      var activeList = STEPS[current].activeActors || [];
+      activeList.forEach(function(name){
+        if (name === 'ca') els.actorCA.classList.add('active');
+        if (name === 'client') els.actorClient.classList.add('active');
+        if (name === 'server') els.actorServer.classList.add('active');
+      });
+    }
+
+    setEdgeClass(els.edgeServerCA, state.edges.serverCA === 'idle' ? null : state.edges.serverCA);
+    setEdgeClass(els.edgeClientCA, state.edges.clientCA === 'idle' ? null : state.edges.clientCA);
+    setEdgeClass(els.edgeClientServer, state.edges.clientServer === 'idle' ? null : state.edges.clientServer);
+
+    prevBooleans = {
+      serverCert: state.server.hasCert,
+      clientCert: state.client.hasCert
+    };
+  }
+
+  function playPacket(spec, onDone){
+    var from = NODE_POS[spec.from], to = NODE_POS[spec.to];
+    var p = els.packet;
+    p.className = 'packet' + (spec.cls ? ' ' + spec.cls : '');
+    var iconKey = spec.kind === 'doc' ? 'doc' : (spec.kind === 'cert' ? 'cert' : (spec.kind === 'lock' ? 'lock' : 'envelope'));
+    p.innerHTML = ICONS[iconKey] + '<span>' + spec.label + '</span>';
+
+    p.style.transition = 'none';
+    p.style.left = pct(from.x, 'x');
+    p.style.top = pct(from.y, 'y');
+    p.classList.remove('show');
+    void p.offsetWidth;
+    p.style.transition = '';
+
+    requestAnimationFrame(function(){
+      p.classList.add('show');
+      requestAnimationFrame(function(){
+        p.style.left = pct(to.x, 'x');
+        p.style.top = pct(to.y, 'y');
+      });
+    });
+
+    var duration = reduceMotion ? 50 : 1000;
+    window.setTimeout(function(){
+      p.classList.remove('show');
+      if (onDone) onDone();
+    }, duration);
+  }
+
+  function clearLoop(){
+    if (loopTimer){ window.clearInterval(loopTimer); loopTimer = null; }
+    els.packet.classList.remove('show');
+  }
+
+  function startLoop(){
+    clearLoop();
+    if (reduceMotion) return;
+    var toggle = true;
+    loopTimer = window.setInterval(function(){
+      var spec = toggle
+        ? { from:'client', to:'server', kind:'envelope', label:'Encrypted stream', cls:'ok' }
+        : { from:'server', to:'client', kind:'envelope', label:'Encrypted stream', cls:'ok' };
+      toggle = !toggle;
+      playPacket(spec, null);
+    }, 1500);
+  }
+
+  function updateMeta(index){
+    var step = STEPS[index];
+    els.stepCount.textContent = 'Step ' + (index + 1) + ' of ' + STEPS.length;
+    els.stepTitle.textContent = step.title;
+    els.stepText.textContent = step.text;
+    els.phasePill.textContent = step.phase === 'A' ? 'Phase 1 — Issuing a certificate' : 'Phase 2 — Connecting securely';
+    els.phasePill.className = 'phase-pill ' + (step.phase === 'A' ? 'issuance' : 'handshake');
+
+    dotEls.forEach(function(d, i){
+      d.classList.toggle('current', i === index);
+      d.classList.toggle('done', i < index);
+    });
+
+    els.btnPrev.disabled = index === 0;
+    els.btnNext.disabled = index === STEPS.length - 1;
+  }
+
+  function goToStep(index){
+    clearLoop();
+    current = index;
+    var baseState = computeState(index - 1);
+    render(baseState);
+    updateMeta(index);
+
+    var step = STEPS[index];
+    var finalState = computeState(index);
+
+    function reveal(){
+      render(finalState);
+      if (step.loop) startLoop();
+    }
+
+    if (step.packet && !reduceMotion){
+      window.setTimeout(function(){ playPacket(step.packet, reveal); }, 60);
+    } else {
+      window.setTimeout(reveal, reduceMotion ? 0 : 120);
+    }
+  }
+
+  var playing = false;
+  var playTimer = null;
+  var playLabel = document.getElementById('play-label');
+
+  function stopPlaying(){
+    playing = false;
+    window.clearInterval(playTimer);
+    playLabel.textContent = 'Play';
+    els.playIcon.innerHTML = '<path d="M7 5l13 7-13 7V5Z"/>';
+  }
+
+  function startPlaying(){
+    playing = true;
+    if (current >= STEPS.length - 1) { goToStep(0); }
+    playLabel.textContent = 'Pause';
+    els.playIcon.innerHTML = '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>';
+    playTimer = window.setInterval(function(){
+      if (current < STEPS.length - 1){
+        goToStep(current + 1);
+      } else {
+        stopPlaying();
+      }
+    }, 4200);
+  }
+
+  els.btnPrev.addEventListener('click', function(){ stopPlaying(); if (current > 0) goToStep(current - 1); });
+  els.btnNext.addEventListener('click', function(){ stopPlaying(); if (current < STEPS.length - 1) goToStep(current + 1); });
+  els.btnReset.addEventListener('click', function(){ stopPlaying(); goToStep(0); });
+  els.btnPlay.addEventListener('click', function(){ if (playing) stopPlaying(); else startPlaying(); });
+
+  document.addEventListener('keydown', function(e){
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight'){ stopPlaying(); if (current < STEPS.length - 1) goToStep(current + 1); }
+    if (e.key === 'ArrowLeft'){ stopPlaying(); if (current > 0) goToStep(current - 1); }
+  });
+
+  els.trustToggle.addEventListener('change', function(){
+    var failing = els.trustToggle.checked;
+    els.demoOk.hidden = failing;
+    els.demoFail.hidden = !failing;
+  });
+
+  goToStep(0);
+})();
+</script>
+</body>
+</html>
