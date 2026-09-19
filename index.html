@@ -81,7 +81,6 @@
   a{color:var(--navy);}
   svg{display:block;}
 
-  /* Full-width container filling the available screen space */
   .page{
     width:100%;
     max-width:1720px;
@@ -89,7 +88,6 @@
     padding:1rem 2rem 3.5rem;
   }
 
-  /* Compact top bar */
   .site-header{
     display:flex;
     align-items:center;
@@ -115,7 +113,6 @@
   .legend-item{display:flex;align-items:center;gap:.4rem;}
   .legend-swatch{width:9px;height:9px;border-radius:50%;flex:none;}
 
-  /* Main two-column split layout */
   .sim-layout{
     display:grid;
     grid-template-columns:minmax(0, 1.35fr) minmax(380px, 1fr);
@@ -124,14 +121,13 @@
     margin-bottom:2.6rem;
   }
 
-  /* Left column: Simulation Canvas */
   .sim-visual{
     position:relative;
     width:100%;
     background:color-mix(in srgb, var(--surface) 65%, transparent);
     border:1px solid var(--line);
     border-radius:16px;
-    padding:1.4rem 1.4rem 1.8rem;
+    padding:1.4rem 1.4rem 2.2rem;
     box-shadow:var(--shadow);
   }
   .stage-wrapper{
@@ -175,7 +171,6 @@
     z-index:4;
   }
 
-  /* Guaranteeing circle integrity — never turns into oval */
   .actor .icon-badge{
     width:64px !important;
     height:64px !important;
@@ -363,7 +358,6 @@
   .packet.ok{border-color:var(--ok);color:var(--ok);}
   .packet.show{opacity:1;}
 
-  /* Right column: Interactive Control and Explanation Panel */
   .sim-sidebar{
     display:flex;
     flex-direction:column;
@@ -495,13 +489,24 @@
     .panel{min-height:auto;}
   }
 
-  /* Responsive Mobile Viewport Adjustments */
   @media (max-width: 600px){
     .page{padding:.8rem .8rem 2.5rem;}
-    .sim-visual{padding:1rem .6rem 1.4rem;}
-    .stage{aspect-ratio:1000/720;}
+    .sim-visual{
+      padding:1.1rem .75rem 2.6rem; /* Extra bottom breathing space so badges never leak out */
+    }
+    .stage{
+      aspect-ratio:1000/780; /* Taller viewport ratio provides plenty of vertical clearance */
+    }
 
-    .actor{width:138px;--icon-half:26px;}
+    .actor{
+      width:148px;
+      --icon-half:26px;
+      gap:.3rem;
+    }
+    .actor:not(.ca) .role{
+      display:none; /* Hiding repetitive role subtext on mobile saves crucial vertical space */
+    }
+
     .actor .icon-badge{
       width:52px !important;
       height:52px !important;
@@ -536,16 +541,27 @@
     }
     .actor.ca .badge-row{justify-content:center;}
 
-    .actor .name{font-size:.8rem;}
-    .actor .role{font-size:.66rem;}
+    .actor .name{font-size:.82rem;}
 
     .cert-card{width:96px;font-size:.56rem;padding:.42rem .5rem;}
     .cert-card .cc-head{font-size:.58rem;}
     .packet{font-size:.62rem;padding:.26rem .55rem;}
 
-    .badge{font-size:.62rem;padding:.14rem .38rem;}
-    .badge svg{width:10px;height:10px;}
-    .trust-chip{font-size:.60rem;padding:.14rem .42rem;}
+    /* Compact badge styling allows 2 key badges per line neatly */
+    .badge-row{
+      gap:.26rem;
+      min-height:auto;
+    }
+    .badge{
+      font-size:.59rem;
+      padding:.13rem .36rem;
+      gap:.22rem;
+    }
+    .badge svg{width:9px;height:9px;}
+    .trust-chip{
+      font-size:.58rem;
+      padding:.13rem .38rem;
+    }
 
     .panel{padding:1.2rem 1.25rem;}
     .panel h2{font-size:1.25rem;}
@@ -555,8 +571,9 @@
   }
 
   @media (max-width: 380px){
-    .stage{aspect-ratio:1000/760;}
-    .actor{width:110px;--icon-half:22px;}
+    .sim-visual{padding:.9rem .55rem 2.8rem;}
+    .stage{aspect-ratio:1000/840;}
+    .actor{width:130px;--icon-half:22px;gap:.25rem;}
     .actor .icon-badge{
       width:44px !important;
       height:44px !important;
@@ -574,10 +591,9 @@
     }
     .actor.ca .icon-badge svg{width:22px;height:22px;}
 
-    .actor .name{font-size:.74rem;}
-    .actor .role{font-size:.60rem;}
-    .badge{font-size:.58rem;padding:.12rem .32rem;}
-    .trust-chip{font-size:.55rem;padding:.12rem .34rem;}
+    .actor .name{font-size:.76rem;}
+    .badge{font-size:.55rem;padding:.11rem .3rem;}
+    .trust-chip{font-size:.53rem;padding:.11rem .32rem;}
     .cert-card{width:84px;font-size:.52rem;}
     .actor.ca .actor-info{max-width:150px;gap:.15rem;}
   }
@@ -610,9 +626,9 @@
       <div class="stage-wrapper">
         <div class="stage" id="stage">
           <svg id="svg-edges" class="edges" viewBox="0 0 1000 590" preserveAspectRatio="none" aria-hidden="true">
-            <line id="edge-server-ca" class="edge-line" x1="820" y1="395" x2="500" y2="92"></line>
-            <line id="edge-client-ca" class="edge-line dash" x1="180" y1="395" x2="500" y2="92"></line>
-            <line id="edge-client-server" class="edge-line" x1="180" y1="395" x2="820" y2="395"></line>
+            <line id="edge-server-ca" class="edge-line" x1="820" y1="380" x2="500" y2="92"></line>
+            <line id="edge-client-ca" class="edge-line dash" x1="180" y1="380" x2="500" y2="92"></line>
+            <line id="edge-client-server" class="edge-line" x1="180" y1="380" x2="820" y2="380"></line>
           </svg>
 
           <!-- Certificate Authority (CA) Node -->
@@ -632,7 +648,7 @@
           </div>
 
           <!-- Client Node -->
-          <div class="actor" id="actor-client" style="left:18%;top:67%;">
+          <div class="actor" id="actor-client" style="left:18%;top:64.4%;">
             <div class="icon-badge">
               <svg viewBox="0 0 48 36" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="7" y="4" width="34" height="21" rx="2"/>
@@ -651,7 +667,7 @@
           </div>
 
           <!-- Server Node -->
-          <div class="actor" id="actor-server" style="left:82%;top:67%;">
+          <div class="actor" id="actor-server" style="left:82%;top:64.4%;">
             <div class="icon-badge">
               <svg viewBox="0 0 48 40" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="6" y="4" width="36" height="14" rx="2"/>
@@ -788,42 +804,42 @@
 
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* Responsive geometry configurations preventing coordinate warping */
+  /* Optimized geometry system with spacious vertical clearances for mobile */
   var GEOMETRY = {
     desktop: {
       dims: { w: 1000, h: 590 },
       nodes: {
         ca:     { x: 500, y: 92  },
-        client: { x: 180, y: 395 },
-        server: { x: 820, y: 395 }
+        client: { x: 180, y: 380 },
+        server: { x: 820, y: 380 }
       },
       certs: {
-        client: { x: 180, y: 250 },
-        server: { x: 820, y: 250 }
+        client: { x: 180, y: 240 },
+        server: { x: 820, y: 240 }
       }
     },
     mobile: {
-      dims: { w: 1000, h: 720 },
+      dims: { w: 1000, h: 780 },
       nodes: {
         ca:     { x: 500, y: 80  },
-        client: { x: 210, y: 450 },
-        server: { x: 790, y: 450 }
+        client: { x: 210, y: 430 },
+        server: { x: 790, y: 430 }
       },
       certs: {
-        client: { x: 210, y: 255 },
-        server: { x: 790, y: 255 }
+        client: { x: 210, y: 245 },
+        server: { x: 790, y: 245 }
       }
     },
     smallMobile: {
-      dims: { w: 1000, h: 760 },
+      dims: { w: 1000, h: 840 },
       nodes: {
         ca:     { x: 500, y: 75  },
-        client: { x: 220, y: 460 },
-        server: { x: 780, y: 460 }
+        client: { x: 220, y: 440 },
+        server: { x: 780, y: 440 }
       },
       certs: {
-        client: { x: 220, y: 260 },
-        server: { x: 780, y: 260 }
+        client: { x: 220, y: 245 },
+        server: { x: 780, y: 245 }
       }
     }
   };
